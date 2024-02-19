@@ -250,9 +250,9 @@ impl Game {
             game.reset_turn();
 
             if game.turn_score >= 0 {
-                game.player_score += 1;
+                game.player_score += game.score_increment;
             } else {
-                game.computer_score += 1;
+                game.computer_score += game.score_increment;
             }
 
             if game.player_score >= 12 {
