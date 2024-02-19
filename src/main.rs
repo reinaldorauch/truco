@@ -1,3 +1,5 @@
+use std::ops::{DerefMut,Deref};
+use core::fmt;
 use core::cmp::Ordering;
 use rand::{thread_rng, rngs::ThreadRng, seq::SliceRandom};
 
@@ -7,6 +9,17 @@ enum Suit {
     Hearts,   // copa
     Spades,   // espadilha
     Diamonds, // Ouros, Mole
+}
+
+impl fmt::Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Suit::Clubs => "♣",
+            Suit::Hearts => "♥",
+            Suit::Spades => "♠",
+            Suit::Diamonds => "♦"
+        })
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
@@ -21,6 +34,23 @@ enum Card {
     Six,
     Five,
     Four,
+}
+
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Card::Three => "3",
+            Card::Two => "2",
+            Card::Ace => "A",
+            Card::Knight => "K",
+            Card::Joker => "J",
+            Card::Queen => "Q",
+            Card::Seven => "7",
+            Card::Six => "6",
+            Card::Five => "5",
+            Card::Four => "4",
+        })
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,7 +73,11 @@ impl PartialOrd for CardWithSuit {
     }
 }
 
-
+impl fmt::Display for CardWithSuit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.0, self.1)
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, PartialOrd)]
 enum Turn {
@@ -51,18 +85,46 @@ enum Turn {
     Computer
 }
 
+struct CardList(Vec<CardWithSuit>);
+
+impl CardList {
+    fn new() -> CardList {
+        CardList(vec![])
+    }
+}
+
+impl Deref for CardList {
+    type Target = Vec<CardWithSuit>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for CardList {
+    fn deref_mut(&mut self) -> &mut Vec<CardWithSuit> {
+        &mut self.0
+    }
+}
+
+impl fmt::Display for CardList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.iter().map(|c| format!("{}", c)).collect::<Vec<_>>().join(" - "))
+    }
+}
+
 struct Game {
     rng: ThreadRng,
-    player_hand: Vec<CardWithSuit>,
-    computer_hand: Vec<CardWithSuit>,
+    player_hand: CardList,
+    computer_hand: CardList,
     turned_card: Option<CardWithSuit>,
-    deck: Vec<CardWithSuit>,
+    deck: CardList,
     player_score: u8,
     computer_score: u8,
     turn: Turn,
     // Turn score is positive at the end, then player won, negative, computer won
     turn_score: i8,
-    turn_stack: Vec<CardWithSuit>,
+    turn_stack: CardList,
     score_increment: u8
 }
 
@@ -70,15 +132,15 @@ impl Game {
     fn new() -> Game {
         Game {
             rng: thread_rng(),
-            player_hand: vec![],
-            computer_hand: vec![],
+            player_hand: CardList::new(),
+            computer_hand: CardList::new(),
             turned_card: None,
-            deck: vec![],
+            deck: CardList::new(),
             player_score: 0,
             computer_score: 0,
             turn: Turn::Player,
             turn_score: 0,
-            turn_stack: vec![],
+            turn_stack: CardList::new(),
             score_increment: 1,
         }
     }
@@ -126,8 +188,8 @@ impl Game {
             }
         }
 
-        println!("player hand: {:?}", self.player_hand);
-        println!("computer hand: {:?}", self.computer_hand);
+        println!("player hand: {}", self.player_hand);
+        println!("computer hand: {}", self.computer_hand);
 
         self.turned_card = self.deck.pop();
     }
@@ -188,8 +250,8 @@ impl Game {
     fn reset_turn(&mut self) {
         self.build_deck();
         self.turn_score = 0;
-        self.computer_hand = vec![];
-        self.player_hand = vec![];
+        self.computer_hand = CardList::new();
+        self.player_hand = CardList::new();
         self.turned_card = None;
     }
 
@@ -208,24 +270,26 @@ impl Game {
 
             game.build_hands_and_flip();
 
-            println!("Sua mão: {:?}", game.player_hand);
+            println!("Sua mão: {}", game.player_hand);
 
-            println!("Carta virada: {:?}", game.turned_card);
+            if let Some(ref carta_virada) = game.turned_card {
+                println!("Carta virada: {}", carta_virada);
+            }
 
             // Running the turn
             for hand_index in 0..6 {
-                println!("A cartas jogadas foram: {:?}", game.turn_stack);
+                println!("A cartas jogadas foram: {}", game.turn_stack);
 
                 let drawn_card = match game.turn {
                     Turn::Player => {
-                        println!("Sua vez! Qual carta vai jogar? {:?}", game.player_hand);
+                        println!("Sua vez! Qual carta vai jogar? {}", game.player_hand);
 
-                        let chosen_card_index =choose_card();
+                        let chosen_card_index = choose_card();
                         game.player_hand.swap_remove(chosen_card_index as usize - 1)                              
                     },
                     Turn::Computer => {
                         let computer_card = game.take_computer_hand();
-                        println!("O computador jogou a carta {:?}", computer_card);
+                        println!("O computador jogou a carta {}", computer_card);
                         computer_card
                     }
                 };
