@@ -1,7 +1,7 @@
-use std::ops::{DerefMut,Deref};
-use core::fmt;
 use core::cmp::Ordering;
-use rand::{thread_rng, rngs::ThreadRng, seq::SliceRandom};
+use core::fmt;
+use rand::{rngs::ThreadRng, seq::SliceRandom, thread_rng};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
 enum Suit {
@@ -13,12 +13,16 @@ enum Suit {
 
 impl fmt::Display for Suit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            Suit::Clubs => "♣",
-            Suit::Hearts => "♥",
-            Suit::Spades => "♠",
-            Suit::Diamonds => "♦"
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Suit::Clubs => "♣",
+                Suit::Hearts => "♥",
+                Suit::Spades => "♠",
+                Suit::Diamonds => "♦",
+            }
+        )
     }
 }
 
@@ -38,18 +42,22 @@ enum Card {
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            Card::Three => "3",
-            Card::Two => "2",
-            Card::Ace => "A",
-            Card::Knight => "K",
-            Card::Joker => "J",
-            Card::Queen => "Q",
-            Card::Seven => "7",
-            Card::Six => "6",
-            Card::Five => "5",
-            Card::Four => "4",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Card::Three => "3",
+                Card::Two => "2",
+                Card::Ace => "A",
+                Card::Knight => "K",
+                Card::Joker => "J",
+                Card::Queen => "Q",
+                Card::Seven => "7",
+                Card::Six => "6",
+                Card::Five => "5",
+                Card::Four => "4",
+            }
+        )
     }
 }
 
@@ -64,11 +72,9 @@ impl CardWithSuit {
 
 impl PartialOrd for CardWithSuit {
     fn partial_cmp(&self, other: &CardWithSuit) -> Option<Ordering> {
-        let Some(ord) = self.0.partial_cmp(&other.0) else { return None };
-
-        match ord {
+        match self.0.partial_cmp(&other.0)? {
             Ordering::Equal => self.1.partial_cmp(&other.1),
-            _ => Some(ord)
+            _ => Some(self.0.partial_cmp(&other.0)?),
         }
     }
 }
@@ -82,7 +88,7 @@ impl fmt::Display for CardWithSuit {
 #[derive(Copy, Clone, PartialEq, PartialOrd)]
 enum Turn {
     Player,
-    Computer
+    Computer,
 }
 
 struct CardList(Vec<CardWithSuit>);
@@ -109,7 +115,15 @@ impl DerefMut for CardList {
 
 impl fmt::Display for CardList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.iter().map(|c| format!("{}", c)).collect::<Vec<_>>().join(" - "))
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(|c| format!("{}", c))
+                .collect::<Vec<_>>()
+                .join(" - ")
+        )
     }
 }
 
@@ -125,7 +139,7 @@ struct Game {
     // Turn score is positive at the end, then player won, negative, computer won
     turn_score: i8,
     turn_stack: CardList,
-    score_increment: u8
+    score_increment: u8,
 }
 
 impl Game {
@@ -165,7 +179,7 @@ impl Game {
             Card::Seven,
             Card::Six,
             Card::Five,
-            Card::Four
+            Card::Four,
         ];
 
         for s in suits.iter() {
@@ -200,22 +214,22 @@ impl Game {
     }
 
     fn check_who_won_hand(&mut self, drawn_card: &CardWithSuit) {
-        let Some(last_drawn) = self.turn_stack.last() else { return };
+        let Some(last_drawn) = self.turn_stack.last() else {
+            return;
+        };
 
         let turned = self.turned_card.as_ref().expect("Game not initialized");
 
         let drawn_or_pile: bool;
 
-        if drawn_card.is_manilha(&turned) && last_drawn.is_manilha(&turned) {
+        if drawn_card.is_manilha(turned) && last_drawn.is_manilha(turned) {
             drawn_or_pile = last_drawn > drawn_card;
+        } else if drawn_card.is_manilha(turned) {
+            drawn_or_pile = true;
+        } else if last_drawn.is_manilha(turned) {
+            drawn_or_pile = false;
         } else {
-            if drawn_card.is_manilha(&turned) {
-                drawn_or_pile = true;
-            } else if last_drawn.is_manilha(&turned) {
-                drawn_or_pile = false;
-            } else {
-                drawn_or_pile = last_drawn > drawn_card;
-            }
+            drawn_or_pile = last_drawn > drawn_card;
         }
 
         let player_won: bool; // true => Player, false => Computer
@@ -224,7 +238,7 @@ impl Game {
             match self.turn {
                 Turn::Player => {
                     player_won = true;
-                },
+                }
                 Turn::Computer => {
                     player_won = false;
                 }
@@ -233,7 +247,7 @@ impl Game {
             match self.turn {
                 Turn::Player => {
                     player_won = false;
-                },
+                }
                 Turn::Computer => {
                     player_won = true;
                 }
@@ -285,8 +299,8 @@ impl Game {
                         println!("Sua vez! Qual carta vai jogar? {}", game.player_hand);
 
                         let chosen_card_index = choose_card();
-                        game.player_hand.swap_remove(chosen_card_index as usize - 1)                              
-                    },
+                        game.player_hand.swap_remove(chosen_card_index as usize - 1)
+                    }
                     Turn::Computer => {
                         let computer_card = game.take_computer_hand();
                         println!("O computador jogou a carta {}", computer_card);
@@ -336,7 +350,9 @@ fn is_odd(n: u32) -> bool {
 
 fn choose_card() -> u8 {
     let mut input = String::new();
-    std::io::stdin().read_line(&mut input).expect("Failed to read line");
+    std::io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
     input.trim().parse().expect("input is not integer")
 }
 
